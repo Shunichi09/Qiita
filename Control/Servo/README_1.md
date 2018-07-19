@@ -11,82 +11,28 @@
 モータみたいに
 一次遅れ系にします
 
-```math
-\dot{\boldsymbol{x}}=\boldsymbol{Ax}+\boldsymbol{Bu}\\
-\boldsymbol{y}=\boldsymbol{x}
-```
-```math
-\boldsymbol{A}=
-\begin{bmatrix}
--1/0.54 & 0\\
-0 & -1/0.54
-\end{bmatrix}\\
+![default](https://user-images.githubusercontent.com/37980935/42916735-8690f50a-8b41-11e8-9867-14ac67272694.JPG)
 
-\boldsymbol{B}=
-\begin{bmatrix}
-1/0.54 & 0\\
-0 & 1/0.54
-\end{bmatrix}
-```
 ## 比較モデル
 モデル化誤差があっても大丈夫だと証明したいので，モデル化誤差ありもかいておきます．
 
-```math
-\acute{\boldsymbol{A}}=
-\begin{bmatrix}
--1/0.54+1 & 0\\
-0 & -1/0.54+1
-\end{bmatrix}\\
+![s](https://user-images.githubusercontent.com/37980935/42916739-913ac65c-8b41-11e8-9939-82b27ff84938.JPG)
 
-\acute{\boldsymbol{B}}=
-\begin{bmatrix}
-1/0.54 & 0\\
-0 & 1/0.54
-\end{bmatrix}
-```
 
 ## 目標信号
 定値rです！定値でなくてもできますが，また今度にします
 
-```math
-\boldsymbol{r}=
-\begin{bmatrix}
-5\\
-3
-\end{bmatrix}
-```
+![ss](https://user-images.githubusercontent.com/37980935/42916750-a4f343cc-8b41-11e8-9465-9824353b931c.JPG)
 
 ## 偏差系
-```math
-\dot{\boldsymbol{\tilde{x}}}=\boldsymbol{{A_e}\tilde{x}}+\boldsymbol{B_e\tilde{u}}\\
-\boldsymbol{e}=\boldsymbol{C_e\tilde{x}}
-```
 
-```math
-\boldsymbol{A_e}=
-\begin{bmatrix}
-A & 0\\
--C & 0
-\end{bmatrix}\\
+![sss](https://user-images.githubusercontent.com/37980935/42916746-a0b38bc8-8b41-11e8-866b-08bfc4fa1d76.JPG)
 
-\boldsymbol{B_e}=
-\begin{bmatrix}
-B\\
-0
-\end{bmatrix}\\
-
-\boldsymbol{C_e}=
-\begin{bmatrix}
--C & 0
-\end{bmatrix}
-```
 
 ## 評価関数
 以下の評価関数を最小化します
 
-```math
-\int_{0}^{\infty}\boldsymbol{e^TQ_1e+\tilde{w}^TQ_2\tilde{w}+\tilde{u}^TR\tilde{u}}dt
-```
+![ssss](https://user-images.githubusercontent.com/37980935/42916754-ab1c8cf4-8b41-11e8-91be-74d05216a9dc.JPG)
 
 eは偏差を表します
 チルダは最終値（目的の値）との偏差を表しています
@@ -99,9 +45,8 @@ QとRの値は適宜設定してください
 教科書をみてみてください
 または，積分型最適サーボの論文をみてください
 
-```math
-\boldsymbol{u(t)=F_ax(t)+G_aw(t)+H_ar-G_aP^{-1}_{22}P^T_{12}x_0-G_aw_0}
-```
+![sssss](https://user-images.githubusercontent.com/37980935/42916794-db31ea74-8b41-11e8-856c-474eca3bba0c.JPG)
+
 ## ブロック線図
 こんな感じでかけます
 
