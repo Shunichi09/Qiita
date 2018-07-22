@@ -19,3 +19,6 @@ ROSでモータを動かすプログラムです（Pythonで書いています�
 
 # Xtion
 ROSでXtionを動かしたプログラムです（Pythonで書いています）
+
+# Functions
+よく使う関数のプログラムを載せています（Pythonで書いています）
