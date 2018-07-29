@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 import pandas as pd
 import math
 
@@ -22,15 +23,15 @@ class Ploter_3D():
         X, Y = np.meshgrid(self.x, self.y)
         Z = self.z
 
-        self.axis.plot_surface(X, Y, Z)
+        self.axis.plot_surface(X, Y, Z, cmap=cm.GnBu)
 
         plt.show()
 
 def main():
     # 軸の作成
-    x = np.array([10, 20, 30, 40]) # 1次元のデータ
-    y = np.array([10, 20, 30, 40]) # 2次元のデータ
-    z = np.array([[1, 2, 3, 4], [5, 6, 7, 8,], [9, 10, 11, 12], [13, 14, 15, 16]])
+    x = np.array([i for i in range(50)]) # 1次元のデータ
+    y = np.array([i for i in range(50)]) # 2次元のデータ
+    z = np.random.rand(50, 50)
     ploter = Ploter_3D(x, y, z)
     ploter.plot_3d()
     
