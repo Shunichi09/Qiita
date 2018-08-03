@@ -25,6 +25,6 @@ class RRT():
 
         # ノード探索
         for node in Nodes:
-            sample
+            distance = (sample - node) * (sample - node)
 
         # 
