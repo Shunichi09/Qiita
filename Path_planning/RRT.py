@@ -11,13 +11,13 @@ class RRT():
 
         # パラメータ群
         # 伸ばし幅
-        self.d = 0.01
+        self.d = 0.1
 
         # 探索範囲
-        self.MAX_x = 10
-        self.MAX_y = 10
-        self.min_x = -10
-        self.min_y = -10
+        self.MAX_x = 3
+        self.MAX_y = 3
+        self.min_x = -3
+        self.min_y = -3
 
         # ノードを作成する
         # これはただのノード
@@ -32,14 +32,12 @@ class RRT():
         self.new_node =None
 
     def search(self):
-        # random点を打つ(-5, 5の範囲で選ぶ)
+        # random点を打つ(-1.5, 1.5の範囲で選ぶ)
         s_x = (np.random.rand() * self.MAX_x) - self.MAX_x/2
         s_y = (np.random.rand() * self.MAX_y) - self.MAX_y/2
 
         sample = np.array([s_x, s_y])
         self.samples = np.append(self.samples, [[s_x, s_y]], axis=0)
-
-        print('sample = {0}'.format(sample))
 
         # ノード探索
         distance = float('inf')
@@ -70,33 +68,23 @@ class RRT():
     def path_make(self):
         # 新ノードを追加
         self.Nodes = np.vstack((self.Nodes, self.new_node))
-        # pathを追加
-        # print(self.path_x)
-        # print(np.array([self.nearest_node[0], self.new_node[0]]))
 
         self.path_x = np.append(self.path_x, np.array([[self.nearest_node[0], self.new_node[0]]]), axis=0)
         self.path_y = np.append(self.path_y, np.array([[self.nearest_node[1], self.new_node[1]]]), axis=0)
 
-        # print('self.Nodes, self.path_x, self.path_y = {0}, {1}, {2}'.format(self.Nodes, self.path_x, self.path_y))
-
         return self.Nodes, self.path_x, self.path_y, self.samples
-
-    def path_back(self):
-        pass
-
-
 
 class Figures():
     def __init__(self):
         self.fig = plt.figure()
         self.axis = self.fig.add_subplot(111)
-    
+
     def fig_set(self):
         # 初期設定
-        MAX_x = 1
-        min_x = -1
-        MAX_y = 1
-        min_y = -1
+        MAX_x = 1.5
+        min_x = -1.5
+        MAX_y = 1.5
+        min_y = -1.5
 
         self.axis.set_xlim(MAX_x, min_x)
         self.axis.set_ylim(MAX_y, min_y)
@@ -117,7 +105,58 @@ class Figures():
 
         plt.show()
 
-    def anim_set(self, path_x, path_y, Nodes):
+    def anim_plot(self, path_x, path_y, Nodes, samples):
+        imgs = []
+        
+        for i in range(path_x.shape[1]):
+            path_imgs = []
+            # pathとサンプルを追加
+            img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
+            path_imgs.extend(img_sample)
+            img_nodes = self.axis.plot(Nodes[:i+1, 0], Nodes[:i+1, 1], '.', color='k')
+            path_imgs.extend(img_nodes)
+
+            for k in range(i):
+                img_path = self.axis.plot(path_x[:, k], path_y[:, k], color='b')
+                path_imgs.extend(img_path)
+
+            imgs.append(path_imgs)
+        
+        animation = ani.ArtistAnimation(self.fig, imgs)
+
+        print('save_animation?')
+        shuold_save_animation = int(input())
+
+        if shuold_save_animation: 
+            animation.save('basic_animation.gif', writer='imagemagick')
+        plt.show()
+
+    
+def main():
+    # figures
+    figure = Figures()
+    figure.fig_set()
+
+    # pathmake
+    path_planner = RRT(0.0, 0.0)
+    iterations = 100
+
+    for k in range(iterations):
+        path_planner.search()
+        Nodes, path_x, path_y, samples = path_planner.path_make()
+
+    # img用に処理
+    path_x = path_x.transpose()
+    path_y = path_y.transpose()
+
+    figure.anim_plot(path_x, path_y, Nodes, samples)
+    
+if __name__ == '__main__':
+    main()
+
+
+'''
+def anim_set(self, path_x, path_y, Nodes):
         # step
         self.step_text = self.axis.text(0.05, 0.9, '', transform=self.axis.transAxes)
         # node
@@ -128,6 +167,8 @@ class Figures():
         self.path_x = path_x
         self.path_y = path_y
         self.Nodes = Nodes
+        # pathをためておくよう
+        self.path_imgs = [self.path_img,]
 
     def init_anim(self): # 初期化
         self.path_img.set_data([], [])
@@ -137,47 +178,19 @@ class Figures():
     def update_anim(self, i):
         # nodes
         self.node_img.set_data(self.Nodes[:i+1, 0], self.Nodes[:i+1, 1])
-        # path
-        print(self.path_x[i+1, :])
-        self.path_img.set_data(self.path_x[i+1, :], self.path_y[i+1, :])
+        # path(作成)
+        img, = self.axis.plot([], [], label='path', color='k')
+        self.path_imgs.append(img, )
+
+        #  self.path_img.set_data(self.path_x[i+1, :], self.path_y[i+1, :])
+        self.path_imgs[i].set_data(self.path_x[i+1, :], self.path_y[i+1, :])
+
         # step
         self.step_text.set_text('step = {0}'.format(i))
 
-        return self.node_img, self.path_img, self.step_text, 
+        return self.node_img,  self.path_imgs, self.step_text,
 
     def show_ani(self):
         animation = ani.FuncAnimation(self.fig, self.update_anim, init_func=self.init_anim, interval=100, frames=1000 ,blit=True)
         plt.show()
-
-def main():
-    # figures
-    figure = Figures()
-    figure.fig_set()
-
-    # pathmake
-    path_planner = RRT(0.0, 0.0)
-    iterations = 1000
-
-    for k in range(iterations):
-        path_planner.search()
-        Nodes, path_x, path_y, samples = path_planner.path_make()
-
-    # img用に処理
-    # path_x = path_x.transpose()
-    # path_y = path_y.transpose()
-    # samples = samples.transpose()
-
-    print(path_x)
-
-    # path お試しplot
-    # plt.plot(path_x[:, :50], path_y[:, :50])
-    # plt.plot(path_x[:, :100], path_y[:, :100], 'r')
-    # plt.plot(Nodes[:, 0], Nodes[:, 1], 'o')
-    # plt.show()
-
-    # figure.plot(path_x, path_y, Nodes)
-    figure.anim_set(path_x, path_y, Nodes)
-    figure.show_ani()
-
-if __name__ == '__main__':
-    main()
+    '''
