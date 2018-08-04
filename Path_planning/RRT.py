@@ -128,22 +128,25 @@ class Figures():
         self.path_x = path_x
         self.path_y = path_y
         self.Nodes = Nodes
+
+    def init_anim(self): # 初期化
+        self.path_img.set_data([], [])
+
+        return self.path_img,
     
     def update_anim(self, i):
         # nodes
         self.node_img.set_data(self.Nodes[:i+1, 0], self.Nodes[:i+1, 1])
-
         # path
-        print(self.path_x[:, :i+1])
-        self.path_img.set_data(self.path_x[:, :i+1],  self.path_y[:, :i+1])
-
+        print(self.path_x[i+1, :])
+        self.path_img.set_data(self.path_x[i+1, :], self.path_y[i+1, :])
         # step
         self.step_text.set_text('step = {0}'.format(i))
 
         return self.node_img, self.path_img, self.step_text, 
 
     def show_ani(self):
-        animation = ani.FuncAnimation(self.fig, self.update_anim, interval=100, frames=100)
+        animation = ani.FuncAnimation(self.fig, self.update_anim, init_func=self.init_anim, interval=100, frames=1000 ,blit=True)
         plt.show()
 
 def main():
@@ -153,26 +156,26 @@ def main():
 
     # pathmake
     path_planner = RRT(0.0, 0.0)
-    iterations = 100
+    iterations = 1000
 
     for k in range(iterations):
         path_planner.search()
         Nodes, path_x, path_y, samples = path_planner.path_make()
 
     # img用に処理
-    path_x = path_x.transpose()
-    path_y = path_y.transpose()
-    samples = samples.transpose()
+    # path_x = path_x.transpose()
+    # path_y = path_y.transpose()
+    # samples = samples.transpose()
 
     print(path_x)
 
     # path お試しplot
     # plt.plot(path_x[:, :50], path_y[:, :50])
+    # plt.plot(path_x[:, :100], path_y[:, :100], 'r')
     # plt.plot(Nodes[:, 0], Nodes[:, 1], 'o')
     # plt.show()
 
     # figure.plot(path_x, path_y, Nodes)
-
     figure.anim_set(path_x, path_y, Nodes)
     figure.show_ani()
 
