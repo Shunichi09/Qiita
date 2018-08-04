@@ -1,19 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
-
-
-class Path_planning():
-    def __init__(self):
-        # Pathプランナー
-        self.path_planner = RRT(init_x, init_y)
-
-        # アニメーション作成
-        self.animation = anim = Animation(axis)
-
-        # 
-
-
+import math
 
 class RRT():
     def __init__(self, init_x, init_y):
@@ -27,51 +15,94 @@ class RRT():
 
         # 探索範囲
         self.MAX_x = 10
-        self.MAX_y = -10
-        self.min_x = 10
+        self.MAX_y = 10
+        self.min_x = -10
         self.min_y = -10
 
         # ノードを作成する
-        self.Nodes = [self.x, self.y]
+        # これはただのノード
+        self.Nodes = np.array([[init_x, init_y]])
+        # これはpath
+        self.path_x = np.empty((0,2), float)
+        self.path_y = np.empty((0,2), float)
+        # samples
+        self.samples = np.empty((0,2), float)
+
+        self.nearest_node =None
+        self.new_node =None
 
     def search(self):
-        # random点を打つ
-        s_x = np.random.rand() * self.MAX_x
-        s_y = np.random.rand() * self.MAX_y
+        # random点を打つ(-5, 5の範囲で選ぶ)
+        s_x = (np.random.rand() * self.MAX_x) - self.MAX_x/2
+        s_y = (np.random.rand() * self.MAX_y) - self.MAX_y/2
 
-        sample = [s_x, s_y]
+        sample = np.array([s_x, s_y])
+        self.samples = np.append(self.samples, [[s_x, s_y]], axis=0)
+
+        print('sample = {0}'.format(sample))
 
         # ノード探索
-        distance = 'inf'
-        nearest_node = None
+        distance = float('inf')
+        self.nearest_node = None
 
-        for node in self.Nodes:
+        for i in range(self.Nodes.shape[0]):
+            node = self.Nodes[i, :]
             part_MSE = (sample - node) * (sample - node)
-            RMSE = np.sqrt(sum(part_MSE))
+            RMSE = math.sqrt(sum(part_MSE))
 
             # 距離が小さかったら追加
             if RMSE < distance:
                 distance = RMSE
-                nearest_node = node
+                self.nearest_node = node
 
-        return nearest_node
+        # 新ノードを作成
+        pull = sample - self.nearest_node
+        grad = math.atan2(pull[1], pull[0])
 
-class Animation():
-    def __init__(self, fig, xlim, ylim, ):
-        self.fig = fig
+        d_x = math.cos(grad) * self.d
+        d_y = math.sin(grad) * self.d
+
+        self.new_node = self.nearest_node + np.array([d_x, d_y])
+        
+        return self.nearest_node, self.new_node
+        
+
+    def path_make(self):
+        # 新ノードを追加
+        self.Nodes = np.vstack((self.Nodes, self.new_node))
+        # pathを追加
+        # print(self.path_x)
+        # print(np.array([self.nearest_node[0], self.new_node[0]]))
+
+        self.path_x = np.append(self.path_x, np.array([[self.nearest_node[0], self.new_node[0]]]), axis=0)
+        self.path_y = np.append(self.path_y, np.array([[self.nearest_node[1], self.new_node[1]]]), axis=0)
+
+        # print('self.Nodes, self.path_x, self.path_y = {0}, {1}, {2}'.format(self.Nodes, self.path_x, self.path_y))
+
+        return self.Nodes, self.path_x, self.path_y, self.samples
+
+    def path_back(self):
+        pass
+
+
+
+class Figures():
+    def __init__(self):
+        self.fig = plt.figure()
         self.axis = self.fig.add_subplot(111)
-
+    
+    def fig_set(self):
         # 初期設定
-        self.MAX_x = 12.5
-        self.min_x = -12.5
-        self.MAX_y = 12.5
-        self.min_y = -12.5
+        MAX_x = 1
+        min_x = -1
+        MAX_y = 1
+        min_y = -1
 
-        self.axis.set_xlim([self.MAX_x, self.min_x])
-        self.axis.set_ylim([self.MAX_y, self.min_y])
+        self.axis.set_xlim(MAX_x, min_x)
+        self.axis.set_ylim(MAX_y, min_y)
 
         # 軸
-        self.axis.legend(True)
+        self.axis.grid(True)
 
         # 縦横比
         self.axis.set_aspect('equal')
@@ -80,40 +111,70 @@ class Animation():
         self.axis.set_xlabel = ['X [m]']
         self.axis.set_ylabel = ['Y [m]']
 
-    def animation
-    # ステップ数表示
-        step_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
+    def plot(self, path_x, path_y, Nodes):
+        self.axis.plot(path_x, path_y)
+        self.axis.plot(Nodes[:, 0], Nodes[:, 1], '.', color='k')
 
-        # 初期設定
-        ball_img, = ax.plot([], [], label='Predicit', color="b")
-                
+        plt.show()
 
-
-
-def update_anim(i):# このiが更新するたびに増えていきます
+    def anim_set(self, path_x, path_y, Nodes):
+        # step
+        self.step_text = self.axis.text(0.05, 0.9, '', transform=self.axis.transAxes)
+        # node
+        self.node_img, = self.axis.plot([], [], '.', label='node', color='k')
+        # path
+        self.path_img, = self.axis.plot([], [], label='path', color='k')
+        # data
+        self.path_x = path_x
+        self.path_y = path_y
+        self.Nodes = Nodes
     
-    ball_x, ball_y= ball.state_update()
+    def update_anim(self, i):
+        # nodes
+        self.node_img.set_data(self.Nodes[:i+1, 0], self.Nodes[:i+1, 1])
 
-    ball_img, = drawer.draw_circle(ball_x, ball_y)
+        # path
+        print(self.path_x[:, :i+1])
+        self.path_img.set_data(self.path_x[:, :i+1],  self.path_y[:, :i+1])
 
-    # 時間
-    step_text.set_text('step = {0}'.format(i))
+        # step
+        self.step_text.set_text('step = {0}'.format(i))
 
-    return ball_img, 
+        return self.node_img, self.path_img, self.step_text, 
+
+    def show_ani(self):
+        animation = ani.FuncAnimation(self.fig, self.update_anim, interval=100, frames=100)
+        plt.show()
 
 def main():
+    # figures
+    figure = Figures()
+    figure.fig_set()
 
-    
+    # pathmake
+    path_planner = RRT(0.0, 0.0)
+    iterations = 100
 
+    for k in range(iterations):
+        path_planner.search()
+        Nodes, path_x, path_y, samples = path_planner.path_make()
 
+    # img用に処理
+    path_x = path_x.transpose()
+    path_y = path_y.transpose()
+    samples = samples.transpose()
 
+    print(path_x)
 
+    # path お試しplot
+    # plt.plot(path_x[:, :50], path_y[:, :50])
+    # plt.plot(Nodes[:, 0], Nodes[:, 1], 'o')
+    # plt.show()
 
+    # figure.plot(path_x, path_y, Nodes)
 
-print('save_animation?')
-shuold_save_animation = int(input())
+    figure.anim_set(path_x, path_y, Nodes)
+    figure.show_ani()
 
-if shuold_save_animation == True: 
-    animation.save('basic_animation.gif', writer='imagemagick')
-
-plt.show()
+if __name__ == '__main__':
+    main()
