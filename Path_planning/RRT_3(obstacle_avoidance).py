@@ -6,17 +6,18 @@ import matplotlib.animation as ani
 import math
 
 class RRT():
-    def __init__(self, init, goal):
+    def __init__(self, init, goal, obstacles):
         # 初期設定
         self.init_x = init[0]
         self.init_y = init[1]
         self.goal_x = goal[0]
         self.goal_y = goal[1]
         self.goal = goal
+        self.obstacles = obstacles
 
         # パラメータ群
         # 伸ばし幅
-        self.d = 0.1
+        self.d = 0.2
         # 何回かに一回はゴールを選ぶ
         self.g_rate = 0.1
         # どこまでゴールに近づければいいか
@@ -82,17 +83,28 @@ class RRT():
         self.new_node = self.nearest_node + np.array([d_x, d_y])
         
         return self.nearest_node, self.new_node
+
+    def check_obstacles(self):
+        obstacle_flag = False
+        for i in range(self.obstacles.shape[0]):
+            obs_dis = np.sqrt(sum((self.new_node - self.obstacles[i, :2]) * (self.new_node - self.obstacles[i, :2])))
+            if obs_dis < self.obstacles[i, 2]:
+                print('Collision!!')
+                obstacle_flag = True
+            
+        return obstacle_flag
         
     def check_goal(self):
         dis = np.sqrt(sum((self.new_node - self.goal) *  (self.new_node - self.goal)))
         goal_flag = False
+        print('dis = {0}'.format(dis))
         if dis < self.g_range:
             print('GOAL!!')
             goal_flag = True
         
         return goal_flag
 
-    def path_make(self):
+    def path_make(self):# 追加処理
         # 新ノードを追加
         self.Nodes = np.vstack((self.Nodes, self.new_node))
 
@@ -108,10 +120,10 @@ class Figures():
 
     def fig_set(self):
         # 初期設定
-        MAX_x = 1.5
-        min_x = -1.5
-        MAX_y = 1.5
-        min_y = -1.5
+        MAX_x = 2
+        min_x = -2
+        MAX_y = 2
+        min_y = -2
 
         self.axis.set_xlim(min_x, MAX_x)
         self.axis.set_ylim(min_y, MAX_y)
@@ -132,7 +144,7 @@ class Figures():
 
         plt.show()
 
-    def anim_plot(self, path_x, path_y, Nodes, samples, goal):
+    def anim_plot(self, path_x, path_y, Nodes, samples, goal, obstacles):
         imgs = []
         finish_buffa = 20# 終了後もそのまま数秒表示したいので
 
@@ -151,6 +163,12 @@ class Figures():
             # goalを追加
             img_goal = self.axis.plot(goal[0], goal[1], '*', color='r')
             img.extend(img_goal)
+            # obstaclesを追加
+            for k in range(obstacles.shape[0]):
+                circle_x, circle_y = self.circle_make(obstacles[k, 0], obstacles[k, 1], obstacles[k ,2])
+                img_obstacle = self.axis.plot(circle_x, circle_y, color='k')
+                img.extend(img_obstacle)
+
             # sampleを追加
             img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
             img.extend(img_sample)
@@ -175,6 +193,18 @@ class Figures():
             animation.save('basic_animation.gif', writer='imagemagick')
 
         plt.show()
+    
+    def circle_make(self, x, y, size):# 円作るよう
+        # 初期化
+        circle_x = [] #位置を表す円のx
+        circle_y = [] #位置を表す円のy
+
+        steps = 100 #円を書く分解能はこの程度で大丈夫
+        for i in range(steps):
+            circle_x.append(x + size*math.cos(i*2*math.pi/steps))
+            circle_y.append(y + size*math.sin(i*2*math.pi/steps))
+        
+        return circle_x, circle_y
 
     
 def main():
@@ -182,65 +212,30 @@ def main():
     figure = Figures()
     figure.fig_set()
 
+
     # pathmake
-    goal = [1.0, 1.0]
+    goal = [1.5, 1.5]
     init = [0.0, 0.0]
-    path_planner = RRT(init, goal)
+    obstacles = np.array([[-1, 1, 0.5], [0, -1, 0.5], [0.5, 0.5, 0.5]])
+    path_planner = RRT(init, goal, obstacles)
     # iterations = 100
 
     while True:
         path_planner.search()
-        goal_flag = path_planner.check_goal()
-        Nodes, path_x, path_y, samples = path_planner.path_make()
-        if goal_flag :
-            break
+        obstacle_flag = path_planner.check_obstacles()
+        if obstacle_flag: # 障害物あり
+            pass
+        else: # なし
+            goal_flag = path_planner.check_goal()
+            Nodes, path_x, path_y, samples = path_planner.path_make()
+            if goal_flag :
+                break
         
     # img用に処理
     path_x = path_x.transpose()
     path_y = path_y.transpose()
 
-    figure.anim_plot(path_x, path_y, Nodes, samples, goal)
+    figure.anim_plot(path_x, path_y, Nodes, samples, goal, obstacles)
     
 if __name__ == '__main__':
     main()
-
-
-'''
-def anim_set(self, path_x, path_y, Nodes):
-        # step
-        self.step_text = self.axis.text(0.05, 0.9, '', transform=self.axis.transAxes)
-        # node
-        self.node_img, = self.axis.plot([], [], '.', label='node', color='k')
-        # path
-        self.path_img, = self.axis.plot([], [], label='path', color='k')
-        # data
-        self.path_x = path_x
-        self.path_y = path_y
-        self.Nodes = Nodes
-        # pathをためておくよう
-        self.path_imgs = [self.path_img,]
-
-    def init_anim(self): # 初期化
-        self.path_img.set_data([], [])
-
-        return self.path_img,
-    
-    def update_anim(self, i):
-        # nodes
-        self.node_img.set_data(self.Nodes[:i+1, 0], self.Nodes[:i+1, 1])
-        # path(作成)
-        img, = self.axis.plot([], [], label='path', color='k')
-        self.path_imgs.append(img, )
-
-        #  self.path_img.set_data(self.path_x[i+1, :], self.path_y[i+1, :])
-        self.path_imgs[i].set_data(self.path_x[i+1, :], self.path_y[i+1, :])
-
-        # step
-        self.step_text.set_text('step = {0}'.format(i))
-
-        return self.node_img,  self.path_imgs, self.step_text,
-
-    def show_ani(self):
-        animation = ani.FuncAnimation(self.fig, self.update_anim, init_func=self.init_anim, interval=100, frames=1000 ,blit=True)
-        plt.show()
-    '''

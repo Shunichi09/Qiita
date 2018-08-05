@@ -1,3 +1,5 @@
+# Link : https://qiita.com/MENDY/items/176cc16c746dc6135ef4
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
@@ -86,9 +88,9 @@ class Figures():
         MAX_y = 1.5
         min_y = -1.5
 
-        self.axis.set_xlim(MAX_x, min_x)
-        self.axis.set_ylim(MAX_y, min_y)
-
+        self.axis.set_xlim(min_x, MAX_x)
+        self.axis.set_ylim(min_y, MAX_y)
+        
         # 軸
         self.axis.grid(True)
 
