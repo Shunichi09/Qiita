@@ -1,17 +1,26 @@
+# made by Shunichi Sekiguchi
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import math
 
 class RRT():
-    def __init__(self, init_x, init_y):
+    def __init__(self, init, goal):
         # 初期設定
-        self.x = init_x
-        self.y = init_y
+        self.init_x = init[0]
+        self.init_y = init[1]
+        self.goal_x = goal[0]
+        self.goal_y = goal[1]
+        self.goal = goal
 
         # パラメータ群
         # 伸ばし幅
         self.d = 0.1
+        # 何回かに一回はゴールを選ぶ
+        self.g_rate = 0.1
+        # どこまでゴールに近づければいいか
+        self.g_range = 0.1
 
         # 探索範囲
         self.MAX_x = 3
@@ -21,7 +30,7 @@ class RRT():
 
         # ノードを作成する
         # これはただのノード
-        self.Nodes = np.array([[init_x, init_y]])
+        self.Nodes = np.array([[self.init_x, self.init_y]])
         # これはpath
         self.path_x = np.empty((0,2), float)
         self.path_y = np.empty((0,2), float)
@@ -32,11 +41,21 @@ class RRT():
         self.new_node =None
 
     def search(self):
-        # random点を打つ(-1.5, 1.5の範囲で選ぶ)
-        s_x = (np.random.rand() * self.MAX_x) - self.MAX_x/2
-        s_y = (np.random.rand() * self.MAX_y) - self.MAX_y/2
+        # 行動決定（何回かに一回はGoalを選ぶ）
+        temp = np.random.randint(0, 10)
+        if temp > 0:
+            # random点を打つ(-1.5, 1.5の範囲で選ぶ)
+            s_x = (np.random.rand() * self.MAX_x) - self.MAX_x/2
+            s_y = (np.random.rand() * self.MAX_y) - self.MAX_y/2
 
-        sample = np.array([s_x, s_y])
+            sample = np.array([s_x, s_y])
+        else:
+            # goalを選ぶ
+            s_x = self.goal_x
+            s_y = self.goal_y
+
+            sample = np.array([s_x, s_y])
+
         self.samples = np.append(self.samples, [[s_x, s_y]], axis=0)
 
         # ノード探索
@@ -64,6 +83,14 @@ class RRT():
         
         return self.nearest_node, self.new_node
         
+    def check_goal(self):
+        dis = np.sqrt(sum((self.new_node - self.goal) *  (self.new_node - self.goal)))
+        goal_flag = False
+        if dis < self.g_range:
+            print('GOAL!!')
+            goal_flag = True
+        
+        return goal_flag
 
     def path_make(self):
         # 新ノードを追加
@@ -105,24 +132,39 @@ class Figures():
 
         plt.show()
 
-    def anim_plot(self, path_x, path_y, Nodes, samples):
+    def anim_plot(self, path_x, path_y, Nodes, samples, goal):
         imgs = []
-        
-        for i in range(path_x.shape[1]):
-            path_imgs = []
-            # pathとサンプルを追加
-            img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
-            path_imgs.extend(img_sample)
-            img_nodes = self.axis.plot(Nodes[:i+1, 0], Nodes[:i+1, 1], '.', color='k')
-            path_imgs.extend(img_nodes)
+        finish_buffa = 20# 終了後もそのまま数秒表示したいので
 
-            for k in range(i):
+        for i in range(path_x.shape[1] + finish_buffa):
+            img = []
+            if i >= path_x.shape[1]:
+                i = path_x.shape[1] - 1
+                img_text = self.axis.text(0.05, 0.9, 'step = {0}'.format(i), transform=self.axis.transAxes)
+                img.append(img_text)
+                img_goal_text = self.axis.text(0.35, 0.5, 'GOAL!!', transform=self.axis.transAxes, fontsize=30)
+                img.append(img_goal_text)
+
+            # step数を追加
+            img_text = self.axis.text(0.05, 0.9, 'step = {0}'.format(i), transform=self.axis.transAxes)
+            img.append(img_text)
+            # goalを追加
+            img_goal = self.axis.plot(goal[0], goal[1], '*', color='r')
+            img.extend(img_goal)
+            # sampleを追加
+            img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
+            img.extend(img_sample)
+            # nodeを追加
+            img_nodes = self.axis.plot(Nodes[:i+2, 0], Nodes[:i+2, 1], '.', color='k')
+            img.extend(img_nodes)
+
+            # pathを追加
+            for k in range(i+1):
                 img_path = self.axis.plot(path_x[:, k], path_y[:, k], color='b')
-                path_imgs.extend(img_path)
-                # print('k = {0}'.format(k))
+                img.extend(img_path)
 
             print('i = {0}'.format(i))
-            imgs.append(path_imgs)
+            imgs.append(img)
         
         animation = ani.ArtistAnimation(self.fig, imgs)
 
@@ -131,6 +173,7 @@ class Figures():
 
         if shuold_save_animation: 
             animation.save('basic_animation.gif', writer='imagemagick')
+
         plt.show()
 
     
@@ -140,18 +183,23 @@ def main():
     figure.fig_set()
 
     # pathmake
-    path_planner = RRT(0.0, 0.0)
-    iterations = 200
+    goal = [1.0, 1.0]
+    init = [0.0, 0.0]
+    path_planner = RRT(init, goal)
+    # iterations = 100
 
-    for k in range(iterations):
+    while True:
         path_planner.search()
+        goal_flag = path_planner.check_goal()
         Nodes, path_x, path_y, samples = path_planner.path_make()
-
+        if goal_flag :
+            break
+        
     # img用に処理
     path_x = path_x.transpose()
     path_y = path_y.transpose()
 
-    figure.anim_plot(path_x, path_y, Nodes, samples)
+    figure.anim_plot(path_x, path_y, Nodes, samples, goal)
     
 if __name__ == '__main__':
     main()
