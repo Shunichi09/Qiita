@@ -4,6 +4,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 import math
+import copy
+
+class Node():
+    def __init__(self, x, y, parent):
+        self.x = x
+        self.y = y
+        self.xy = np.array([x, y])
+        self.parent = parent # 親ノードを管理
 
 class RRT():
     def __init__(self, init, goal, obstacles):
@@ -31,7 +39,8 @@ class RRT():
 
         # ノードを作成する
         # これはただのノード
-        self.Nodes = np.array([[self.init_x, self.init_y]])
+        self.Nodes_list = np.array([Node(self.init_x, self.init_y, None)])
+        self.Nodes_posi = np.array([[self.init_x, self.init_y]])
         # これはpath
         self.path_x = np.empty((0,2), float)
         self.path_y = np.empty((0,2), float)
@@ -56,36 +65,38 @@ class RRT():
             s_y = self.goal_y
 
             self.sample = np.array([s_x, s_y])
-
+        
         # ノード探索
         distance = float('inf')
         self.nearest_node = None
 
-        for i in range(self.Nodes.shape[0]):
-            node = self.Nodes[i, :]
-            part_MSE = (self.sample - node) * (self.sample - node)
+        for i in range(self.Nodes_list.shape[0]):
+            node = copy.deepcopy(self.Nodes_list[i])
+            part_MSE = (self.sample - node.xy) * (self.sample - node.xy)
             RMSE = math.sqrt(sum(part_MSE))
 
             # 距離が小さかったら追加
             if RMSE < distance:
                 distance = RMSE
-                self.nearest_node = node
+                self.nearest_node = node # node type
 
         # 新ノードを作成
-        pull = self.sample - self.nearest_node
+        pull = self.sample - self.nearest_node.xy
         grad = math.atan2(pull[1], pull[0])
 
         d_x = math.cos(grad) * self.d
         d_y = math.sin(grad) * self.d
 
-        self.new_node = self.nearest_node + np.array([d_x, d_y])
+        new_node_xy = self.nearest_node.xy + np.array([d_x, d_y])
+
+        self.new_node = Node(new_node_xy[0], new_node_xy[1], self.nearest_node)
         
         return self.nearest_node, self.new_node
 
     def check_obstacles(self):
         obstacle_flag = False
         for i in range(self.obstacles.shape[0]):
-            obs_dis = np.sqrt(sum((self.new_node - self.obstacles[i, :2]) * (self.new_node - self.obstacles[i, :2])))
+            obs_dis = np.sqrt(sum((self.new_node.xy - self.obstacles[i, :2]) * (self.new_node.xy - self.obstacles[i, :2])))
             if obs_dis < self.obstacles[i, 2]:
                 print('Collision!!')
                 obstacle_flag = True
@@ -93,7 +104,7 @@ class RRT():
         return obstacle_flag
         
     def check_goal(self):
-        dis = np.sqrt(sum((self.new_node - self.goal) *  (self.new_node - self.goal)))
+        dis = np.sqrt(sum((self.new_node.xy - self.goal) *  (self.new_node.xy - self.goal)))
         goal_flag = False
         print('dis = {0}'.format(dis))
         if dis < self.g_range:
@@ -102,16 +113,22 @@ class RRT():
         
         return goal_flag
 
-    def path_make(self):# 追加処理
+    def make_all_path(self):# 追加処理
         # 新ノードを追加
-        self.Nodes = np.vstack((self.Nodes, self.new_node))
+        self.Nodes_list = np.append(self.Nodes_list, self.new_node)
+        self.Nodes_posi =  np.vstack((self.Nodes_posi, self.new_node.xy))
 
-        self.path_x = np.append(self.path_x, np.array([[self.nearest_node[0], self.new_node[0]]]), axis=0)
-        self.path_y = np.append(self.path_y, np.array([[self.nearest_node[1], self.new_node[1]]]), axis=0)
+        self.path_x = np.append(self.path_x, np.array([[self.nearest_node.x, self.new_node.x]]), axis=0)
+        self.path_y = np.append(self.path_y, np.array([[self.nearest_node.y, self.new_node.y]]), axis=0)
 
         self.samples = np.append(self.samples, [[self.sample[0], self.sample[1]]], axis=0)
 
-        return self.Nodes, self.path_x, self.path_y, self.samples
+        return self.Nodes_posi, self.path_x, self.path_y, self.samples
+
+    def make_final_path(self):
+        pass
+
+
 
 class Figures():
     def __init__(self):
@@ -144,7 +161,7 @@ class Figures():
 
         plt.show()
 
-    def anim_plot(self, path_x, path_y, Nodes, samples, goal, obstacles):
+    def anim_plot(self, path_x, path_y, Nodes_posi, samples, goal, obstacles):
         imgs = []
         finish_buffa = 20# 終了後もそのまま数秒表示したいので
 
@@ -173,7 +190,7 @@ class Figures():
             img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
             img.extend(img_sample)
             # nodeを追加
-            img_nodes = self.axis.plot(Nodes[:i+2, 0], Nodes[:i+2, 1], '.', color='k')
+            img_nodes = self.axis.plot(Nodes_posi[:i+2, 0], Nodes_posi[:i+2, 1], '.', color='k')
             img.extend(img_nodes)
 
             # pathを追加
@@ -223,13 +240,16 @@ def main():
     while True:
         path_planner.search()
         obstacle_flag = path_planner.check_obstacles()
+        
         if obstacle_flag: # 障害物あり
-            pass
-        else: # なし
-            goal_flag = path_planner.check_goal()
-            Nodes, path_x, path_y, samples = path_planner.path_make()
-            if goal_flag :
-                break
+            continue
+
+        goal_flag = path_planner.check_goal()
+        Nodes, path_x, path_y, samples = path_planner.make_all_path()
+        
+        if goal_flag :
+            # final_path = path_planner.make_final_path()
+            break
         
     # img用に処理
     path_x = path_x.transpose()
