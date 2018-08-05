@@ -7,11 +7,12 @@ import math
 import copy
 
 class Node():
-    def __init__(self, x, y, parent):
+    def __init__(self, x, y, parent, way_flag=True):
         self.x = x
         self.y = y
         self.xy = np.array([x, y])
         self.parent = parent # 親ノードを管理
+        self.way_flag = way_flag
 
 class RRT():
     def __init__(self, init, goal, obstacles):
@@ -39,7 +40,7 @@ class RRT():
 
         # ノードを作成する
         # これはただのノード
-        self.Nodes_list = np.array([Node(self.init_x, self.init_y, None)])
+        self.Nodes_list = [Node(self.init_x, self.init_y, None, way_flag=False)]
         self.Nodes_posi = np.array([[self.init_x, self.init_y]])
         # これはpath
         self.path_x = np.empty((0,2), float)
@@ -70,8 +71,8 @@ class RRT():
         distance = float('inf')
         self.nearest_node = None
 
-        for i in range(self.Nodes_list.shape[0]):
-            node = copy.deepcopy(self.Nodes_list[i])
+        for i in range(len(self.Nodes_list)):
+            node = self.Nodes_list[i]
             part_MSE = (self.sample - node.xy) * (self.sample - node.xy)
             RMSE = math.sqrt(sum(part_MSE))
 
@@ -115,7 +116,7 @@ class RRT():
 
     def make_all_path(self):# 追加処理
         # 新ノードを追加
-        self.Nodes_list = np.append(self.Nodes_list, self.new_node)
+        self.Nodes_list.append(self.new_node)
         self.Nodes_posi =  np.vstack((self.Nodes_posi, self.new_node.xy))
 
         self.path_x = np.append(self.path_x, np.array([[self.nearest_node.x, self.new_node.x]]), axis=0)
@@ -126,9 +127,21 @@ class RRT():
         return self.Nodes_posi, self.path_x, self.path_y, self.samples
 
     def make_final_path(self):
-        pass
+        final_path = [[self.Nodes_list[-1].x, self.Nodes_list[-1].y]]
 
+        lastindex = len(self.Nodes_list) - 1
 
+        while self.Nodes_list[lastindex].way_flag:
+            node = self.Nodes_list[lastindex]
+            final_path = np.vstack((final_path, [[node.x, node.y]]))
+            lastindex = self.Nodes_list.index(node.parent)
+            print('last= {0}'.format(lastindex))
+
+        final_path = np.vstack((final_path, [[self.init_x, self.init_y]]))
+
+        print(final_path)
+
+        return final_path
 
 class Figures():
     def __init__(self):
@@ -161,7 +174,7 @@ class Figures():
 
         plt.show()
 
-    def anim_plot(self, path_x, path_y, Nodes_posi, samples, goal, obstacles):
+    def anim_plot(self, path_x, path_y, Nodes_posi, samples, goal, obstacles, final_path):
         imgs = []
         finish_buffa = 20# 終了後もそのまま数秒表示したいので
 
@@ -173,6 +186,8 @@ class Figures():
                 img.append(img_text)
                 img_goal_text = self.axis.text(0.35, 0.5, 'GOAL!!', transform=self.axis.transAxes, fontsize=30)
                 img.append(img_goal_text)
+                img_final_path = self.axis.plot(final_path[:, 0], final_path[:, 1], color='r', linewidth=5)
+                img.extend(img_final_path)
 
             # step数を追加
             img_text = self.axis.text(0.05, 0.9, 'step = {0}'.format(i), transform=self.axis.transAxes)
@@ -198,6 +213,7 @@ class Figures():
                 img_path = self.axis.plot(path_x[:, k], path_y[:, k], color='b')
                 img.extend(img_path)
 
+            
             print('i = {0}'.format(i))
             imgs.append(img)
         
@@ -233,7 +249,7 @@ def main():
     # pathmake
     goal = [1.5, 1.5]
     init = [0.0, 0.0]
-    obstacles = np.array([[-1, 1, 0.5], [0, -1, 0.5], [0.5, 0.5, 0.5]])
+    obstacles = np.array([[-1, 1, 0.5], [0, -1, 0.5], [0.5, 0.5, 0.25], [1.5, 1, 0.25]])
     path_planner = RRT(init, goal, obstacles)
     # iterations = 100
 
@@ -246,16 +262,16 @@ def main():
 
         goal_flag = path_planner.check_goal()
         Nodes, path_x, path_y, samples = path_planner.make_all_path()
-        
+
         if goal_flag :
-            # final_path = path_planner.make_final_path()
+            final_path = path_planner.make_final_path()
             break
         
     # img用に処理
     path_x = path_x.transpose()
     path_y = path_y.transpose()
 
-    figure.anim_plot(path_x, path_y, Nodes, samples, goal, obstacles)
+    figure.anim_plot(path_x, path_y, Nodes, samples, goal, obstacles, final_path)
     
 if __name__ == '__main__':
     main()
