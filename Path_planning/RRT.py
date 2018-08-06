@@ -115,10 +115,10 @@ class Figures():
             # pathとサンプルを追加
             img_sample = self.axis.plot(samples[i, 0], samples[i, 1], '*', color='b')
             path_imgs.extend(img_sample)
-            img_nodes = self.axis.plot(Nodes[:i+1, 0], Nodes[:i+1, 1], '.', color='k')
+            img_nodes = self.axis.plot(Nodes[:i+2, 0], Nodes[:i+2, 1], '.', color='k')
             path_imgs.extend(img_nodes)
 
-            for k in range(i):
+            for k in range(i+1):
                 img_path = self.axis.plot(path_x[:, k], path_y[:, k], color='b')
                 path_imgs.extend(img_path)
                 # print('k = {0}'.format(k))
@@ -143,7 +143,7 @@ def main():
 
     # pathmake
     path_planner = RRT(0.0, 0.0)
-    iterations = 200
+    iterations = 100
 
     for k in range(iterations):
         path_planner.search()
