@@ -1,4 +1,4 @@
-'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -16,8 +16,8 @@ a_nwe = a.reshape((2, 2))
 
 print(a)
 print(a_nwe)
-'''
 
+'''
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
@@ -39,3 +39,4 @@ for i in range(len(xs)):
 anim = animation.ArtistAnimation(fig, imgs, interval=100)
 anim.save('result4.gif', 'imagemagick')
 plt.show()
+'''
